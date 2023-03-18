@@ -3,13 +3,20 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/OnNa05/knowledge-sharing-basic-go/mongodb/connection"
+	repo "github.com/OnNa05/knowledge-sharing-basic-go/mongodb/repositories"
+	gw "github.com/OnNa05/knowledge-sharing-basic-go/scr/user/gateways"
+	sv "github.com/OnNa05/knowledge-sharing-basic-go/scr/user/services"
+
+	"github.com/labstack/echo/middleware"
 	"github.com/labstack/echo"
 )
 
-// add logging middleware
+// add custom logging middleware
 // log information about the request
 func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -64,17 +71,19 @@ func AuthenticationMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 func main() {
 	e := echo.New()
 
-	e.Use(LoggingMiddleware)
+	e.Use(middleware.Logger())
 
-	e.Use(AuthenticationMiddleware)
-
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
+	e.GET("/ping", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK!")
 	})
 
-	e.GET("/protected", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Protected resource")
-	})
+	m := connection.NewMongoDB(os.Getenv("MONGODB_URI"))
+
+	repo0 := repo.NewUserRepo(m)
+
+	apiSV := sv.NewAPIService(repo0)
+
+	gw.NewHTTPGateway(e.Group(""), apiSV)
 
 	e.Logger.Fatal((e.Start(":1323")))
 }

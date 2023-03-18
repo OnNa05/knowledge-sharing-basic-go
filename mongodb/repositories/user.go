@@ -20,7 +20,8 @@ type IUserRepo interface {
 	FindByEmail(ctx context.Context, email string) (*entities.UserEntitty, error)
 	FindByID(ctx context.Context, id string) (*entities.UserEntitty, error)
 	FindByEmailAndPassword(ctx context.Context, email string, password string) (*entities.UserEntitty, error)
-	UpdateTokenByEmailAndPassword(ctx context.Context, ent *entities.UserEntitty) error
+	UpdateUser(ctx context.Context, value *entities.UserEntitty) (*mongo.UpdateResult, error)
+	DeleteUserByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error)
 }
 
 func NewUserRepo(ds *connection.MongoDB) IUserRepo {
@@ -59,11 +60,6 @@ func (r *UserRepo) FindByEmailAndPassword(ctx context.Context, email string, pas
 	return res, err
 }
 
-func (r *UserRepo) UpdateTokenByEmailAndPassword(ctx context.Context, ent *entities.UserEntitty) error {
-	_, err := r.Collection.UpdateOne(ctx, bson.M{"email": ent.Email, "password": ent.Password}, bson.M{"$set": bson.M{"access_token": ent.AccessToken}})
-	return err
-}
-
 func (r *UserRepo) FindByID(ctx context.Context, id string) (*entities.UserEntitty, error) {
 	var res *entities.UserEntitty
 
@@ -75,4 +71,13 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*entities.UserEntit
 	err = r.Collection.FindOne(ctx, bson.M{"_id": oid}).Decode(&res)
 
 	return res, err
+}
+
+func (r *UserRepo) DeleteUserByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error) {
+	return r.Collection.DeleteOne(ctx, bson.M{"_id": id})
+}
+
+// update user
+func (r *UserRepo) UpdateUser(ctx context.Context, value *entities.UserEntitty) (*mongo.UpdateResult, error) {
+	return r.Collection.UpdateOne(ctx, bson.M{"_id": value.ID}, bson.M{"$set": value})
 }
