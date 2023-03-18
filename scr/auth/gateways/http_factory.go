@@ -1,19 +1,19 @@
 package gateways
 
 import (
-	service "github.com/OnNa05/knowledge-sharing-basic-go/scr/auth/services"
+	services "github.com/OnNa05/knowledge-sharing-basic-go/scr/auth/service"
 	"github.com/labstack/echo"
 )
 
 type HTTPGateway struct {
-	AuthenService service.IAuthService
+	AuthenService services.IAuthService
 }
 
-func NewHTTPGateway(g *echo.Group, sv service.IAuthService) {
+func NewHTTPGateway(g *echo.Group, sv services.IAuthService) {
 	h := &HTTPGateway{
 		AuthenService: sv,
 	}
 
 	g.POST("/register", h.Register)
-
+	g.POST("/login", h.Login)
 }

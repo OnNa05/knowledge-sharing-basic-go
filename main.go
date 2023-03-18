@@ -3,17 +3,19 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/OnNa05/knowledge-sharing-basic-go/mongodb/connection"
 	repo "github.com/OnNa05/knowledge-sharing-basic-go/mongodb/repositories"
 	gw "github.com/OnNa05/knowledge-sharing-basic-go/scr/user/gateways"
 	sv "github.com/OnNa05/knowledge-sharing-basic-go/scr/user/services"
+	"github.com/dgrijalva/jwt-go"
 
-	"github.com/labstack/echo/middleware"
+	authgw "github.com/OnNa05/knowledge-sharing-basic-go/scr/auth/gateways"
+	authsv "github.com/OnNa05/knowledge-sharing-basic-go/scr/auth/service"
+
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 )
 
 // add custom logging middleware
@@ -43,27 +45,26 @@ func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 // add authentication middleware
-func AuthenticationMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+func UIDHeader(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		authHeader := c.Request().Header.Get("Authorization")
-
-		if authHeader == "" {
-			return echo.NewHTTPError(http.StatusUnauthorized, "missing Authorization header")
+		rawU := c.Get("user")
+		if rawU == nil {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "session is expired.",
+			})
 		}
 
-		authParts := strings.Split(authHeader, " ")
-
-		if len(authParts) != 2 || strings.ToLower(authParts[0]) != "bearer" {
-			return echo.NewHTTPError(http.StatusUnauthorized, "invalid Authorization header format")
+		u := rawU.(*jwt.Token)
+		claims := u.Claims.(jwt.MapClaims)
+		if claims["identity"] == nil {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "session is expired.",
+			})
 		}
 
-		token := authParts[1]
-
-		// token validation logic
-		if token != "token" {
-			return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
-		}
-
+		uid := claims["identity"].(string)
+		fmt.Println("UIDHeader UID: ", uid)
+		c.Request().Header.Set("bn-uid", uid)
 		return next(c)
 	}
 }
@@ -77,13 +78,27 @@ func main() {
 		return c.String(http.StatusOK, "OK!")
 	})
 
-	m := connection.NewMongoDB(os.Getenv("MONGODB_URI"))
+	m := connection.NewMongoDB("")
 
 	repo0 := repo.NewUserRepo(m)
 
 	apiSV := sv.NewAPIService(repo0)
+	authSrv := authsv.NewAuthenService(repo0)
 
-	gw.NewHTTPGateway(e.Group(""), apiSV)
+	userrg := e.Group("/user")
+	jwtRequiredRoute := userrg.Group(
+		"",
+		middleware.JWTWithConfig(middleware.JWTConfig{
+			SigningKey: []byte("SECRET"),
+		}),
+		UIDHeader,
+	)
+	userg := jwtRequiredRoute.Group(
+		"",
+	)
+
+	gw.NewHTTPGateway(userg, apiSV)
+	authgw.NewHTTPGateway(e.Group("/auth"), authSrv)
 
 	e.Logger.Fatal((e.Start(":1323")))
 }

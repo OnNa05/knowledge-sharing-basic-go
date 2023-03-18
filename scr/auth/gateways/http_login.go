@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/OnNa05/knowledge-sharing-basic-go/scr/auth/dao"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo"
 )
 
 func (h HTTPGateway) Login(c echo.Context) error {
