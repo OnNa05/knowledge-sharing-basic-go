@@ -22,6 +22,7 @@ type IUserRepo interface {
 	FindByEmailAndPassword(ctx context.Context, email string, password string) (*entities.UserEntitty, error)
 	UpdateUser(ctx context.Context, value *entities.UserEntitty) (*mongo.UpdateResult, error)
 	DeleteUserByID(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error)
+	UpdateToken(ctx context.Context, email, token string) (*mongo.UpdateResult, error)
 }
 
 func NewUserRepo(ds *connection.MongoDB) IUserRepo {
@@ -80,4 +81,8 @@ func (r *UserRepo) DeleteUserByID(ctx context.Context, id primitive.ObjectID) (*
 // update user
 func (r *UserRepo) UpdateUser(ctx context.Context, value *entities.UserEntitty) (*mongo.UpdateResult, error) {
 	return r.Collection.UpdateOne(ctx, bson.M{"_id": value.ID}, bson.M{"$set": value})
+}
+
+func (r *UserRepo) UpdateToken(ctx context.Context, email, token string) (*mongo.UpdateResult, error) {
+	return r.Collection.UpdateOne(ctx, bson.M{"email": email}, bson.M{"$set": bson.M{"token": token}})
 }
