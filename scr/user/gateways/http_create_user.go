@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/OnNa05/knowledge-sharing-basic-go/scr/user/dao"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/labstack/echo"
 )
@@ -19,11 +20,18 @@ func (h HTTPGateway) CreateUser(c echo.Context) error {
 		})
 	}
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
 	res, err := h.APIService.CreateUser(ctx, dao.User{
 		ID:       user.ID,
 		Name:     user.Name,
 		Email:    user.Email,
-		Password: user.Password,
+		Password: string(hashedPassword),
 		Role:     user.Role,
 		CreateAt: time.Now(),
 	})
