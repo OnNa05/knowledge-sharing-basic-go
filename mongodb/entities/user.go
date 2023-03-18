@@ -12,5 +12,6 @@ type UserEntitty struct {
 	Email    string             `json:"email" bson:"email"`
 	Password string             `json:"password" bson:"password"`
 	Role     string             `json:"role" bson:"role"`
+	Token    string             `json:"token" bson:"token"`
 	CreateAt time.Time          `json:"create_at" bson:"create_at"`
 }
